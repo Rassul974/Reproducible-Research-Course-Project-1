@@ -1,0 +1,140 @@
+---
+title: "Reroducible Research - Course Project 1"
+author: "Rassul Kalfane"
+date: "29/05/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading and preprocessing the dataLoading and preprocessing the data
+
+First, we load and see some summary statistics of the data: 
+
+
+```{r cars}
+#Code for reading in the dataset and/or processing the data
+
+unzip("repdata_data_activity.zip")
+data <- read.csv("activity.csv")
+summary(data)
+names(data)
+head(data)
+pairs(data)
+```
+
+## What is mean total number of steps taken per day?
+
+### 1- Calculate the total number of steps taken per day
+
+```{r cars2}
+stepsDay<-aggregate(steps ~ date, data, sum, na.rm=TRUE)
+```
+
+
+### 2- Make a histogram of the total number of steps taken each day
+
+```{r cars3}
+hist(stepsDay$steps)
+```
+
+### 3- Calculate and report the mean and median of the total number of steps taken per day
+
+```{r cars4}
+#Mean and median number of steps taken each day
+
+meanStepsDay<-mean(stepsDay$steps)
+meanStepsDay
+
+medianStepsDay<-median(stepsDay$steps)
+medianStepsDay
+```
+
+
+## What is the average daily activity pattern?
+
+### 1- Make a time series plot 
+
+```{r cars5}
+stepsInterval<-aggregate(steps~interval, data=data, mean, na.rm=TRUE)
+plot(stepsInterval)
+```
+
+### 2- Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r cars6}
+maxInterval<-stepsInterval[which.max(stepsInterval$steps),]$interval
+maxInterval
+```
+
+## Imputing missing values
+
+Note that there are a number of days/intervals where there are missing values (coded as NA\color{red}{\verb|NA|}NA). The presence of missing days may introduce bias into some calculations or summaries of the data.  
+
+### 1- Calculate and report the total number of missing values in the dataset 
+
+numberNA<-sum(is.na(data$steps))
+numberNA
+
+### 2- Devise a strategy for filling in all of the missing values in the dataset.  
+
+The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+```{r cars7}
+intervalMean<-function(interval){
+  stepsInterval[stepsInterval$interval==interval,]$steps
+}
+```
+
+### 3- Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```{r cars8}
+dataWithoutNA<-data
+for(i in 1:nrow(dataWithoutNA)){
+  if(is.na(dataWithoutNA[i,]$steps)){
+    dataWithoutNA[i,]$steps <- intervalMean(dataWithoutNA[i,]$interval)
+  }
+}
+```
+
+
+### 4- Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. 
+
+```{r cars9}
+stepsDayWithoutNA <- aggregate(steps ~ date, data=dataWithoutNA, sum)
+hist(stepsDayWithoutNA$steps)
+```
+
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+### 1- Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+```{r cars10}
+#Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+dataWithoutNA$date <- as.Date(strptime(dataWithoutNA$date, format="%Y-%m-%d"))
+dataWithoutNA$day <- weekdays(dataWithoutNA$date)
+for (i in 1:nrow(dataWithoutNA)) {
+  if (dataWithoutNA[i,]$day %in% c("Saturday","Sunday")) {
+    dataWithoutNA[i,]$day<-"weekend"
+  }
+  else{
+    dataWithoutNA[i,]$day<-"weekday"
+  }
+}
+stepsByDay <- aggregate(dataWithoutNA$steps ~ dataWithoutNA$interval + dataWithoutNA$day, dataWithoutNA, mean)
+```
+
+### 2- Make a panel plot containing a time series plot
+
+```{r cars11}
+#Make a panel plot containing a time series plot (i.e. type = "l"\color{red}{\verb|type = "l"|}type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+
+names(stepsByDay) <- c("interval", "day", "steps")
+library(lattice)
+xyplot(steps ~ interval | day, stepsByDay, layout = c(1, 2), 
+       xlab = "Interval", ylab = "Number of steps")
+```
